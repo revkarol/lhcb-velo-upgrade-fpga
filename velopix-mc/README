@@ -1,0 +1,16 @@
+To simply download boole_mc_data.bin, go here -->  https://dl.dropboxusercontent.com/u/116253/boole_mc_data.bin
+
+To create a boole_mc_data.bin file with superpixel data just run SetupBoole; gaudirun.py myBoole.py
+Some data files from Heinrich are on livlbserv01 /storage/kurt/vp or something
+
+
+decode.c is to check that the file can be decoded ok.
+emu.c is to emulate the velopix but also needs some additional files to do the de-synchronisation 
+        it creates a file called spix-latency.txt
+        this needs processing to reorder for a particular chip
+        e.g. chip 550
+                 zcat spix-latency.txt.gz | grep '550$'  | sort -n | ./desync-gwt.py > desync550.txt
+
+
+NOTE moved the bychip dir to bigdata dir.
+run gen_all_chips.sh to regenerate.
