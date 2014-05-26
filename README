@@ -1,0 +1,2 @@
+test/ - a directory for test commits and general tomfoolery.  Feel free to play.
+velopix-mc/ - contains sources for generating VeloPix data (data itself should not be committed to the repository).
