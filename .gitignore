@@ -1,0 +1,44 @@
+
+
+
+# Numerous always-ignore extensions
+*.diff
+*.err
+*.orig
+*.log
+*.rej
+*.swo
+*.swp
+*.vi
+*~
+*.sass-cache
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# OS or Editor folders
+.DS_Store
+Thumbs.db
+.cache
+
+# Folders to ignore
+.hg
+.svn
+.CVS
