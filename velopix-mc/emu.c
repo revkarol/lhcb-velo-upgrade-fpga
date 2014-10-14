@@ -26,7 +26,7 @@ int main(int argc, char **argv)
         //FILE *f = fopen("test.bin", "rb");  // old data, new MC
         //FILE *f = fopen("boole_mc_data.bin", "rb");  // new data
         FILE *f = fopen("old_boole_mc.bin", "rb");  // old data
-        FILE *outf = fopen("spix-latency-gray.txt", "w");
+        FILE *outf = fopen("spix-latency-gray-datavalid.txt", "w");
         int nevts = 10;
         int chip = -1;
         int banksize = -1;
@@ -133,6 +133,7 @@ int main(int argc, char **argv)
                                                 int f3 = 0;
                                                 int f4 = 0;
                                                 int sum = 0;
+                                                unsigned int datavalid;
                                                 for(b=4; b<128; b++){  // leave 0101 at start
                                                         //fprintf(outf, "%d", gwtdata[c][l][b]);
                                                         cbuff[b-4] = 48+gwtdata[c][l][b];
@@ -148,8 +149,12 @@ int main(int argc, char **argv)
                                                         gwtdata[c][l][b] = 0;
                                                 }
                                                 sum = f1+f2+f3+f4;
+                                                datavalid = (sum>0) ? 1 : 0;
                                                 //fprintf(outf, "0101");
-                                                fprintf(outf, "0101%124s %d %d %d %d \n", cbuff, c, sum, evt, nl);
+                                                //fprintf(outf, "0101%124s %d %d %d %d \n", cbuff, c, sum, evt, nl);
+
+                                                //fprintf(outf, "0101%124s %d \n", cbuff, c);
+                                                fprintf(outf, "0101%124s%d %d \n", cbuff, datavalid, c);
                                         }
                                 }
                                 SP_counts[c] = 0;
