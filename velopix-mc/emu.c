@@ -134,7 +134,7 @@ int main(int argc, char **argv)
                                                 int f4 = 0;
                                                 int sum = 0;
                                                 unsigned int datavalid;
-                                                for(b=4; b<128; b++){  // leave 0101 at start
+                                                for(b=4; b<128; b++){  // leave 1010 at start
                                                         //fprintf(outf, "%d", gwtdata[c][l][b]);
                                                         cbuff[b-4] = 48+gwtdata[c][l][b];
                                                         if (b >= 8 && b < 38 ){ 
@@ -150,11 +150,11 @@ int main(int argc, char **argv)
                                                 }
                                                 sum = f1+f2+f3+f4;
                                                 datavalid = (sum>0) ? 1 : 0;
-                                                //fprintf(outf, "0101");
-                                                //fprintf(outf, "0101%124s %d %d %d %d \n", cbuff, c, sum, evt, nl);
+                                                //fprintf(outf, "1010");
+                                                //fprintf(outf, "1010%124s %d %d %d %d \n", cbuff, c, sum, evt, nl);
 
-                                                //fprintf(outf, "0101%124s %d \n", cbuff, c);
-                                                fprintf(outf, "0101%124s%d %d \n", cbuff, datavalid, c);
+                                                //fprintf(outf, "1010%124s %d \n", cbuff, c);
+                                                fprintf(outf, "1010%124s%d %d \n", cbuff, datavalid, c);
                                         }
                                 }
                                 SP_counts[c] = 0;
