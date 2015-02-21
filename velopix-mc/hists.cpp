@@ -10,7 +10,9 @@
 
 int main(int argc, char **argv)
 {
-        FILE *f = fopen("boole_mc_data.bin", "rb");
+        //FILE *f = fopen("boole_mc_data.bin", "rb");
+        //FILE *f = fopen("old_boole_mc.bin", "rb");
+        FILE *f = fopen("test.bin", "rb");
         TFile *rf = new TFile("hists.root", "recreate");
         int nevts = 10;
         int chip = -1;

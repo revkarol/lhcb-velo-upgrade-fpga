@@ -32,7 +32,7 @@ for line in sys.stdin :
                                 parbits = str(par)+parbits
                                 gwtdata = spp+gwtdata  
                         gwtframe = '0101'+parbits+gwtdata
-                print gwtframe #, nspix
+                print gwtframe[::-1] #, nspix  the [::-1] reverses the string
                 gwtdata = ''
                 parbits = ''
 
