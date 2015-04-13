@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 inline unsigned int binaryToGray(unsigned int num);
 unsigned int grayToBinary(unsigned int num);
@@ -18,6 +19,7 @@ struct SP
         unsigned int parity;
         //unsigned int pixels;
         unsigned int bank;
+        unsigned int id;  // for debug only
 
         struct SP *next;
 };
@@ -42,25 +44,33 @@ int main(int argc, char **argv)
         int evt ; 
         int i,j;
         int k=0;
+        unsigned int globalid = 0;
         unsigned char paritybits = 0; 
         //unsigned int gwtdata[120];
         unsigned char gwtdata[624][4][128];  //chips, links, bits
         struct SP *latency_buff[512];
+        struct SP *latency_buff_tail[512];
         unsigned int SP_counts[624];
         unsigned int backpressure[624];
+        unsigned int rand_spPos[624];
+        unsigned int last_rrlink[624];  // round robin the links
         int tl=0;
         int lastevt=0;
         int c,l,b = 0; //chips, links, bits
 
+        srand(time(NULL));
         init_filling_scheme();
 
         int ii;
         for (ii=0; ii<512; ii++){
                 latency_buff[ii] = NULL;
+                latency_buff_tail[ii] = NULL;
         }
         for (ii=0; ii<624; ii++){
                 SP_counts[ii] = 0;
                 backpressure[ii] = 0;
+                rand_spPos[ii] = rand()%4;
+                last_rrlink[ii] = 0;
         }
 
         for(c=0; c<624; c++){
@@ -72,6 +82,7 @@ int main(int argc, char **argv)
         }
 
         while(1==fread(&evt, sizeof(unsigned int), 1, f)){
+                //if (evt == 512) break;
                 if (lastevt != evt){
                         
                         printf("evt %d hits %d nsp %d\n", evt, total_hits, total_nsp);
@@ -79,6 +90,13 @@ int main(int argc, char **argv)
                         //total_hits = 0;
                         //fprintf(stderr, "sp in gwtdata\n");
                         
+                        struct SP *backpressure_buff[512] ;
+                        struct SP *backpressure_buff_tail[512] ;
+                        for (ii=0; ii<512; ii++){
+                                backpressure_buff[ii] = NULL;
+                                backpressure_buff_tail[ii] = NULL;
+                        }
+
                         // put SPs in gwtdata
                         for(c=0; c<624; c++){
                                 unsigned int t = lastevt%512;
@@ -86,6 +104,7 @@ int main(int argc, char **argv)
                                 //struct SP *head = latency_buff[t];
                                 struct SP *curSP ;
                                 //printList((latency_buff[t]));
+                                //if (evt==100) printf("%d %d\n", c, numLinks(c));
                                 while((curSP = listSearchAndRemove(c, &(latency_buff[t]))) != NULL){
                                         //if(evt > 510){
                                         //fprintf(stderr, "%d %d -- ", c, t);
@@ -100,8 +119,11 @@ int main(int argc, char **argv)
                                         }
                                         //put curSP in gwtdata 
                                         if(SP_counts[c] < 4*numLinks(c)){
-                                                int curLink = SP_counts[c]/4;
-                                                int spPos = SP_counts[c]%4;
+                                                //last_rrlink[c] = (last_rrlink[c]+SP_counts[c]/4)%4;
+                                                int curLink = (last_rrlink[c]+SP_counts[c]/4)%4;
+                                                int spPos = (rand_spPos[c]+SP_counts[c])%4;
+                                                //if (c == 182) 
+                                                //printf("    c=%d link=%d sppos=%d rand=%d cnt=%d numlinks=%d\n", c, curLink, spPos, rand_spPos[c], SP_counts[c], numLinks(c));
 
                                                 for(b=0; b<30; b++){
                                                         unsigned int bit = ((curSP->bank)>>b)&1;  // may need to reverse LSB/MSB ordering to ((curSP->bank)>>(29-b))&1 
@@ -114,27 +136,61 @@ int main(int argc, char **argv)
                                         } else {
                                         // not enough room, move SP to next event. 
                                                 
+
                                                 unsigned int tn = (t+1)%512;
-                                                curSP->next = latency_buff[tn];
+                                                //curSP->next = latency_buff[tn];
                                                 curSP->latency = (curSP->latency)+1;
-                                                latency_buff[tn] = curSP;
+                                                //latency_buff[tn] = curSP;
 
                                                 backpressure[curSP->chip]++;
-                                                //fprintf(stderr, "backpressure chip %d latency %d\n", curSP->chip, curSP->latency);
+
+                                                if (backpressure_buff[tn] == NULL){
+                                                        backpressure_buff[tn] = curSP;
+                                                        backpressure_buff_tail[tn] = curSP;
+                                                        backpressure_buff[tn]->next = NULL;
+                                                } else {
+                                                        backpressure_buff_tail[tn]->next = curSP;
+                                                        backpressure_buff_tail[tn] = backpressure_buff_tail[tn]->next;
+                                                        backpressure_buff_tail[tn]->next = NULL;
+                                                
+                                                }
+
+
+                                                //if (evt >100 && evt < 104 && c==218)
+                                                //fprintf(stderr, "backpressure %d chip %d latency %d\n", backpressure[curSP->chip], curSP->chip, curSP->latency);
                                         }
+
+                                        //if (c == 218){
+                                                //printf("id %d ", curSP->id);
+                                        //}
                                 }
                         }
                         //printf("backpressure ");
-                        //for (ii=0; ii<624; ii++){
-                                //printf("%3d ", backpressure[ii]);
-                        //}
-                        //printf("\n");
+                        int totbp = 0;
                         for (ii=0; ii<624; ii++){
+                                totbp += backpressure[ii];
+                                //printf("%d %3d %d\n",ii, backpressure[ii], numLinks(ii));
+                        }
+                        //printf("\n");
+
+
+                        printf("backpressure 218 %d tot %d \n", backpressure[218], totbp);
+                        for (ii=0; ii<624; ii++){
+                                last_rrlink[ii] = (1+last_rrlink[ii]+(SP_counts[ii]-1)/4)%4;
                                 SP_counts[ii] = 0;
                                 backpressure[ii] = 0;
+                                rand_spPos[ii] = rand()%4;
                         }
 
-                //fprintf(stderr, "clear gwtdata\n");
+                        for (ii=0; ii<512; ii++){
+                                if (backpressure_buff_tail[ii] != NULL){
+                                        backpressure_buff_tail[ii]->next = latency_buff[ii]; 
+                                        latency_buff[ii] = backpressure_buff[ii];
+                                }
+                                backpressure_buff[ii] = NULL;
+                        }
+
+                        //fprintf(stderr, "clear gwtdata\n");
                         // print and clear gwtdata
                         for(c=0; c<624; c++){
                                 unsigned nl = numLinks(c);
@@ -219,9 +275,22 @@ int main(int argc, char **argv)
                         newsp->parity = parity;
                         //newsp->pixels = pix;
                         newsp->bank = sp;
-                        newsp->next = latency_buff[latency%512];
-                        latency_buff[latency%512] = newsp;
+                        newsp->id = globalid++;
+                        
+                        // add to start of list (old version)
+                        //newsp->next = latency_buff[latency%512];
+                        //latency_buff[latency%512] = newsp;
 
+                        newsp->next = NULL;
+
+                        // add to end of list
+                        if (latency_buff[latency%512] == NULL){
+                                latency_buff[latency%512] = newsp;
+                                latency_buff_tail[latency%512] = newsp;
+                        } else {
+                                latency_buff_tail[latency%512]->next = newsp;
+                                latency_buff_tail[latency%512] = latency_buff_tail[latency%512]->next;
+                        }
 
 
 
