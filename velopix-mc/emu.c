@@ -6,6 +6,7 @@
 inline unsigned int binaryToGray(unsigned int num);
 unsigned int grayToBinary(unsigned int num);
 inline unsigned int numLinks(unsigned int chip);
+void permute(unsigned int *p);
 void init_filling_scheme();
 
 int filling_scheme[3654];
@@ -52,7 +53,7 @@ int main(int argc, char **argv)
         struct SP *latency_buff_tail[512];
         unsigned int SP_counts[624];
         unsigned int backpressure[624];
-        unsigned int rand_spPos[624];
+        unsigned int rand_spPos[624][4];
         unsigned int last_rrlink[624];  // round robin the links
         int tl=0;
         int lastevt=0;
@@ -69,7 +70,11 @@ int main(int argc, char **argv)
         for (ii=0; ii<624; ii++){
                 SP_counts[ii] = 0;
                 backpressure[ii] = 0;
-                rand_spPos[ii] = rand()%4;
+                //rand_spPos[ii] = rand()%4;
+                int j;
+                for(j=0; j<4; ++j){
+                        rand_spPos[ii][j]=j;
+                }
                 last_rrlink[ii] = 0;
         }
 
@@ -119,9 +124,16 @@ int main(int argc, char **argv)
                                         }
                                         //put curSP in gwtdata 
                                         if(SP_counts[c] < 4*numLinks(c)){
-                                                //last_rrlink[c] = (last_rrlink[c]+SP_counts[c]/4)%4;
                                                 int curLink = (last_rrlink[c]+SP_counts[c]/4)%4;
-                                                int spPos = (rand_spPos[c]+SP_counts[c])%4;
+                                                if(SP_counts[c]%4==0){
+                                                        int j;
+                                                        for(j=0; j<4; ++j){
+                                                                rand_spPos[c][j]=j;
+                                                        }
+                                                        permute(rand_spPos[c]);
+                                                }
+                                                int spPos = rand_spPos[c][SP_counts[c]%4]; 
+
                                                 //if (c == 182) 
                                                 //printf("    c=%d link=%d sppos=%d rand=%d cnt=%d numlinks=%d\n", c, curLink, spPos, rand_spPos[c], SP_counts[c], numLinks(c));
 
@@ -179,7 +191,12 @@ int main(int argc, char **argv)
                                 last_rrlink[ii] = (1+last_rrlink[ii]+(SP_counts[ii]-1)/4)%4;
                                 SP_counts[ii] = 0;
                                 backpressure[ii] = 0;
-                                rand_spPos[ii] = rand()%4;
+                                //rand_spPos[ii] = rand()%4;
+                                //int j;
+                                //for(j=0; j<4; ++j){
+                                        //rand_spPos[ii][j]=j;
+                                //}
+                                //permute(rand_spPos[ii]);
                         }
 
                         for (ii=0; ii<512; ii++){
@@ -248,8 +265,8 @@ int main(int argc, char **argv)
                         int bcid = evt%512;
                         int fullbcid = evt%3564;
                         int graybcid = binaryToGray(bcid);
-                        //int latency = evt + 8 + spAddr%64;  // this is time of arrival from t=0 first evt.
                         int latency = evt + 8 + spAddr%64;  // this is time of arrival from t=0 first evt.
+                        //int latency = evt + 8 ;  // this is time of arrival from t=0 first evt.
                         /*int graylatencybcid = binaryToGray(latency%3564) ;  // 3564 BCIDs */
                         int sp = bank|(graybcid<<21);
                         struct SP *newsp = (struct SP*)malloc(sizeof(struct SP));
@@ -386,6 +403,16 @@ struct SP* listSearchAndRemove(unsigned int chip, struct SP **head)
         }
         return NULL;
         
+}
+
+void permute(unsigned int *p)
+{
+        int i;
+        for(i=0; i<4; ++i){
+                int j = rand() % (i+1);
+                p[i] = p[j];
+                p[j] = i;
+        }
 }
 
 void init_filling_scheme()
