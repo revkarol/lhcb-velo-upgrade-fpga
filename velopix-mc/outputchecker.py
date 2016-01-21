@@ -18,7 +18,19 @@ h_sp_fillsch = TH1F("h_sp_fillsch", "Filling scheme", 4096, -0.5, 4095.5)
 h_sp_chip = TH1F("h_sp_chip", "SPs vs Chip", 624, -0.5, 623.5)
 #h_sp_link = TH1F("h_sp_link", "SPs vs link", 4, -0.5, 3.5)
 h_sp_gwtslot = TH1F("h_sp_gwtslot", "SPs vs GWT slot", 4, -0.5, 3.5)
+h_trains = TH1F("h_trains", "train length", 1000, -0.5, 999.5)
+h_trains_max = TH1F("h_trains_max", "max train length vs chip", 1000, -0.5, 999.5)
+h_bxid_latency = TH1F("h_bxid_latency", "bxid latency", 1000, -0.5, 999.5)
 
+trains_max = [0]*624
+trains = [0]*624
+ntrains = [0]*624
+ntrains_of50 = [0]*624
+ntrains_of100 = [0]*624
+ntrains_of150 = [0]*624
+ntrains_of200 = [0]*624
+
+bxid_gaps = [0]*624*512 # determine the gap between this bxid and the last one
 j = 0
 
 
@@ -28,6 +40,9 @@ sys.stdout.flush()
 sys.stdout.write("\b" * 51)
 
 f.seek(0)
+
+tick = 0
+
 for l in f:
     j+=1
     if j%(num_lines/49) == 1 : 
@@ -66,7 +81,31 @@ for l in f:
             h_sp_bxid.Fill(bxid)
             h_sp_chip.Fill(chip)
             h_sp_gwtslot.Fill(i)
+
+            gap = tick - bxid_gaps[chip*512 + bxid]
+            h_bxid_latency.Fill(gap)
+            bxid_gaps[chip*512 + bxid] = tick
+
+            trains[chip] += 1
+            if trains_max[chip] < trains[chip] : 
+                trains_max[chip] = trains[chip]
+        else :
+            if trains[chip] > 50 : ntrains_of50[chip] += 1
+            if trains[chip] > 100 : ntrains_of100[chip] += 1
+            if trains[chip] > 150 : ntrains_of150[chip] += 1
+            if trains[chip] > 200 : ntrains_of200[chip] += 1
+            ntrains[chip] += 1
+            h_trains.Fill(trains[chip])
+            trains[chip] = 0  # could be off by up to 3 with train length if first sp is empty and others are full
+
         i+=1
+        if chip == 0 : 
+            tick += 1
+
+for i in range(624):
+    h_trains_max.Fill(i, trains_max[i])
+    #h_trains_max.Fill(i, 100.*ntrains_of100[i]/ntrains[i])
+
 
 
 filling_scheme = [

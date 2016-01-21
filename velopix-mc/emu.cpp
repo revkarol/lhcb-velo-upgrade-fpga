@@ -34,7 +34,9 @@ int main(int argc, char **argv)
 {
         //FILE *f = fopen("test.bin", "rb");  // old data, new MC
         //FILE *f = fopen("boole_mc_data.bin", "rb");  // new data
-        FILE *f = fopen("/home/karol/Dropbox/bigdata/velopix-mc/July2014MC.bin", "rb");
+        //FILE *f = fopen("/home/karol/Dropbox/bigdata/velopix-mc/July2014MC.bin", "rb");
+        //FILE *f = fopen("/home/karol/Dropbox/bigdata/velopix-mc/booledata-2015-md.bin", "rb");
+        FILE *f = fopen("/home/karol/Dropbox/bigdata/velopix-mc/booledata-2015.bin", "rb");
         //FILE *f = fopen("old_boole_mc.bin", "rb");  // old data
         FILE *outf = fopen("spix-latency-gray-datavalid.txt", "w");
         //FILE *outf = fopen("spix-latency-datavalid.txt", "w");
@@ -329,7 +331,7 @@ int main(int argc, char **argv)
                         int spAddr = bank >> 8 ;
                         int bcid = evt%512;
                         int fullbcid = evt%3564;
-                        int graybcid = binaryToGray(bcid);
+                        int graybcid = binaryToGray(bcid);  // NOTE : gray(9b) != gray(12b)&0x1ff  i.e. MUST gray 9b number!
                         int latency = evt + 8 + spAddr%64;  // this is time of arrival from t=0 first evt.
                         //int latency = evt + 8 ;  // this is time of arrival from t=0 first evt.
 
@@ -391,8 +393,8 @@ int main(int argc, char **argv)
 
         fclose(f);
         fclose(outf);
-        evttree->Write();
-        sptree->Write();
+        //evttree->Write();
+        //sptree->Write();
         rootfile->Write();
         rootfile->Close();
         printf("\n");
@@ -632,6 +634,7 @@ void init_filling_scheme()
                 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
         for (i=0; i<3564; ++i){
-                filling_scheme[i] = curfs[i];
+                filling_scheme[i] = curfs[i];  // nominal
+                //filling_scheme[i] = 1;         // all bunches filled
         }
 }
