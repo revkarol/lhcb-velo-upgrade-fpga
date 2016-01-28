@@ -1,4 +1,3 @@
-mkdir -p bychip
 mkdir -p bychip_datavalid
 
 for i in `seq 0 623` ; do 
