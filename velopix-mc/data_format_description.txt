@@ -1,0 +1,63 @@
+NOTE: Best viewed with a fixed width font!
+
+Each file represents one chip.  The chips can have 1,2 or 4 output links.  The
+hottest chips have 4 and therefore the files differ in sizes.  The data
+represents the output of the serializers on the chips.  That means that even 
+the serializer will still send data every 25 ns.  So "empty" events are filled
+with zeros with a data invalid flag in the header "0110".
+
+
+Lines in the file look like this:
+
+01100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+01011000010000001101100001110110010000001000000001000010110000101000010011001110111000111100000000000010000011011001011010100000
+
+1 line = 128 bits = 1 GWT frame
+01011000010000001101100001110110010000001000000001000010110000101000010011001110111000111100000000000010000011011001011010100000
+^                                                                                                                              ^
+bit0                                                                                                                      bit127
+LSB                                                                                                                          MSB
+Same endianness everywhere
+
+Can break up the GWT frame into constituents:
+0101   1000     010000001101100001110110010000 001000000001000010110000101000 010011001110111000111100000000 000010000011011001011010100000
+head   parity     SPP0                           SPP1                           SPP2                           SPP3
+
+Header: 0101 = datavalid, 0110 = data invalid
+
+Parity = 1000 in this case: meaning
+        parity(SPP0) = 1
+        parity(SPP1) = 0
+        parity(SPP2) = 0
+        parity(SPP3) = 0
+
+Examining SPP0:
+010000001101100001110110010000 
+^                            ^
+LSB                        MSB
+bit0                     bit29 
+
+Split SPP0 into constituents:
+01000000  1101100001110  110010000 
+pixels    SP_address     BXID
+
+Each of these are the same endianness LSB to MSB
+Therefore: 
+            LSB -> MSB          MSB -> LSB     Gray -> Binary     Hex     Int      Comments
+Pixels      01000000            00000010                          0x2     2       pixel 1 was hit (counting from 0)
+SP_address  1101100001110       0111000011011                     0xe1b   3611    SP column 56, SP row 27
+BXID        110010000           000010011      000011101          0x1d    29      9 LSBs of BXID 
+
+Only the BXID is Gray-coded so that has to be converted back to standard binary.  
+
+pixel row = SP row * 4
+pixel col = SP col * 2
+
+SuperPixel numbering 
+3 | 7
+2 | 6
+1 | 5
+0 | 4
+
+Therefore pixel address is (27*4 + 1, 56*2 + 0), row=109, col=112
+
