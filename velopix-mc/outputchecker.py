@@ -49,6 +49,7 @@ h_sp_gwtslot = TH1F("h_sp_gwtslot", "SPs vs GWT slot", 4, -0.5, 3.5)
 h_trains = TH1F("h_trains", "train length", 1000, -0.5, 999.5)
 h_trains_max = TH1F("h_trains_max", "max train length vs chip", 1000, -0.5, 999.5)
 h_bxid_latency = TH1F("h_bxid_latency", "bxid latency", 1000, -0.5, 999.5)
+h_hitmap = TH2F("h_hitmap_126", "hitmap chip 126", 128, -0.5, 127.5, 64, -0.5, 63.5)
 
 trains_max = [0]*624
 trains = [0]*624
@@ -74,6 +75,7 @@ littletick = 0
 bigtick = 0
 bxidprefix = 0
 
+print "modified for just 1 module chip 0 -> 192"
 for l in f:
     j+=1
     if j%(num_lines/49) == 1 : 
@@ -132,6 +134,10 @@ for l in f:
 
             #if (chip == 0) :
                 #print bxid , littletick, bigtick, fullbxid
+            if (chip == 192 ) : 
+                col = (addr>>6)
+                row = (addr&0x3f)
+                h_hitmap.Fill(col, row)
 
             h_sp_chip.Fill(chip)
             h_sp_gwtslot.Fill(i)
@@ -154,7 +160,8 @@ for l in f:
             trains[chip] = 0  # could be off by up to 3 with train length if first sp is empty and others are full
 
         i+=1
-    if chip == 0 : 
+    if chip == 192 : #hottest module only
+    #if chip == 0 :  # change back here for all chips
         littletick += 1
         bigtick += 1
         if littletick >= 512 : 

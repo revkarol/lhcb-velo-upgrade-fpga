@@ -39,7 +39,10 @@ int total_hits = 0;
 int main(int argc, char **argv)
 {
         //FILE *f = fopen("/home/karol/Dropbox/bigdata/velopix-mc/booledata-2015.bin", "rb");
-        FILE *f = fopen("test.bin", "rb");
+        //FILE *f = fopen("/home/karol/Dropbox/bigdata/velopix-mc/booledata-2016-02.bin", "rb");
+        //FILE *f = fopen("test-2016_07-renum.bin", "rb");
+        FILE *f = fopen("test-2016_07_29-renum.bin", "rb");
+        //FILE *f = fopen("test.bin", "rb");
         FILE *outf = fopen("spix-latency-gray-datavalid.txt", "w");
         TFile *rootfile = new TFile("emutest.root", "recreate");
         TTree *evttree = new TTree("evttree", "evttree");
@@ -393,7 +396,8 @@ void write_out_gwtdata(unsigned char gwtdata[624][4][128], FILE *outfile)
 {
 
         unsigned int c, l, b;
-        for(c=0; c<624; c++){
+        //for(c=0; c<624; c++){
+        for(c=192; c<204; c++){
                 unsigned nl = numLinks(c);
                 char cbuff[129];
                 cbuff[128] = '\0';
@@ -682,7 +686,7 @@ void init_filling_scheme()
                 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
         for (i=0; i<3564; ++i){
-                filling_scheme[i] = curfs[i];  // nominal
+                //filling_scheme[i] = curfs[i];  // nominal
                 filling_scheme[i] = 1;         // all bunches filled
         }
 }

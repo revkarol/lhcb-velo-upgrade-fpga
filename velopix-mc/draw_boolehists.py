@@ -16,8 +16,8 @@ for i in range(624):
     h_slim.Fill(i, 4*lim)
 
 h_prof = h_nsps.ProfileX()
-h_prof.Draw()
+h_prof.Draw('hist')
 h_prof.SetTitle('Avg # SPs vs Chip')
 h_slim.SetMarkerColor(kRed)
-h_slim.Draw('p* same')
+h_slim.Draw('p same')
 
