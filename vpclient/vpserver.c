@@ -10,6 +10,8 @@
 
 #include "spidrvpxcmds.h"
 #include "vpxdefs.h"
+#include "MiniDAQ.h"	//AFP
+
 
 #define u32 uint32_t
 #define u8 uint8_t
@@ -44,9 +46,11 @@ void do_response(u8 *msg, int sock);
 int vpx_reg( int addr, int nbytes, u8 *data, u32 *status );
 int vpx_set_reg( int addr, int nbytes, u8 *data, u32 *status );
 int vpx_errorid();
-static int vpx_get_reply( int nbytes );
+static int vpx_get_reply( int nbytes, u32 address );
 static void vpx_tx_transmit();
 static int vpx_tx_full();
+static int vpx_rx_notempty();
+static u32 vpx_addr_map(u32 dev);
 
 int listen_fd;
 u8 sendbuff[2048/8];
@@ -71,6 +75,7 @@ void err_die(char *msg, int sock)
 int open_session()
 {
 	struct sockaddr_in sa;
+	lbPcie_user_init();       //inicialize the PCIe of CCPC AFP
         listen_fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (listen_fd == -1) {
                 err_die("cannot create socket", 0);
@@ -119,6 +124,7 @@ int open_session()
                 close(connect_fd);
         }
 
+ 	lbPcie_user_close();  //close PCIe port of CCPC
         close(listen_fd);
         return EXIT_SUCCESS;  
 }
@@ -133,7 +139,10 @@ void do_cmd(u8 *msg, int n, int sock)
         u8 reply[5*4 + 1536]; // Large enough to fit largest register (1536 bits) 8x
         u32 err   = ERR_NONE;
         u32 rlen = 5 * 4; // The default reply length including 1 dataword
-        printf("got packet %x %x %x %x %x \n", cmd, len, dum, dev, data);
+        printf("got packet %x %d %d %d %x \n", cmd, len, dum, dev, data);
+
+	VpxId = dev;
+
 	switch(cmd){
 		case CMD_GET_SOFTWVERSION : 
 			do_response("SWVERSION: 0.0.1", sock);
@@ -276,19 +285,44 @@ int vpx_reg( int addr, int nbytes, u8 *data, u32 *status )
 #endif
 
   // Do read sequence
-  u32 word;
+  u32 word, address;
+  u8 go;
+  go = 0x7; // go 3 links of velo
   word = (((u32) VpxPkt[3] <<  0) | ((u32) VpxPkt[2] << 8) |
 	  ((u32) VpxPkt[1] << 16) | ((u32) VpxPkt[0] << 24)) ;
+   
   //KH SpidrRegs[SPIDRVPX_TX_DATA_I] = word;
+  address = vpx_addr_map(vpx_addr);
+  //address = (((u32) MINIDAQ_GBT_HEADER << 16) | ((u32) MINIDAQ_GBT_FIBER_4 <<12) | ((u32) MINIDAQ_TEST_REGISTER));		//MiniDAQ address
+
+   printf("write one packet\n");
+   if (lbPcie_user_write(address , &word, 1)!=0)                   //write address to read
+    {
+        printf("LLI error Writing rx1 \n");
+    } 
+    
+
   word = (((u32) VpxPkt[7] <<  0) | ((u32) VpxPkt[6] << 8) |
 	  ((u32) VpxPkt[5] << 16) | ((u32) VpxPkt[4] << 24)) ;
   //KH SpidrRegs[SPIDRVPX_TX_DATA_I] = word;
-  //KH vpx_tx_transmit();
+  //vpx_tx_transmit();
+   printf("write one packet\n");
+   if (lbPcie_user_write(address , &word, 1)!=0)                   //write address to read
+    {
+        printf("LLI error Writing rx1 \n");
+    } 
 
+   printf("write go velo\n");
+    if (lbPcie_user_write(MINIDAQ_GO_VELO , &go, 1)!=0)                   //Go velo
+    {
+        printf("LLI error Writing go rx2\n");
+    } 	
   // Check TX statemachine?
   // ...
 
-  int nwords = vpx_get_reply( nbytes );
+
+   printf("get reply\n");
+  int nwords = vpx_get_reply( nbytes, address);
 
   // Check header
   if( VpxPkt[0] != 0xE8 )
@@ -358,7 +392,7 @@ int vpx_set_reg( int addr, int nbytes, u8 *data, u32 *status )
   if( UseBroadcast )
     vpx_addr = VPX_BROADCAST_ADDR;
   else
-    vpx_addr = VpxId;
+    vpx_addr = VpxId; //chip addr
 
   u8 vpx_addr_hi = (u8) ((vpx_addr & 0x7F00) >> 8);
   u8 vpx_addr_lo = (u8) (vpx_addr & 0xFF);
@@ -370,6 +404,9 @@ int vpx_set_reg( int addr, int nbytes, u8 *data, u32 *status )
   VpxPkt[2] = vpx_addr_lo;
   VpxPkt[3] = reg_addr_hi;
   VpxPkt[4] = reg_addr_lo;
+
+  u8 go;
+  go = 0x7; // go 3 links of velo
 
   // Append the data bytes
   if( nbytes > 1536/8 ) nbytes = 1536/8;
@@ -396,7 +433,7 @@ int vpx_set_reg( int addr, int nbytes, u8 *data, u32 *status )
 #endif
 
   // Do write sequence
-  u32 word, j = 0;
+  u32 word, address, j = 0;
   for( i=0; i<(1+2+2+nbytes+3)/4; ++i, j+=4 )
     {
       if( vpx_tx_full() )
@@ -407,11 +444,22 @@ int vpx_set_reg( int addr, int nbytes, u8 *data, u32 *status )
       word = (((u32) VpxPkt[j+3] <<  0) | ((u32) VpxPkt[j+2] << 8) |
 	      ((u32) VpxPkt[j+1] << 16) | ((u32) VpxPkt[j+0] << 24)) ;
       //SpidrRegs[SPIDRVPX_TX_DATA_I] = word;
+//	address = (((u32) MINIDAQ_GBT_HEADER << 16) | ((u32) MINIDAQ_GBT_FIBER_4 <<12) | ((u32) MINIDAQ_VPX_ADDR_1));
+  address = vpx_addr_map(vpx_addr);
+       if (lbPcie_user_write(&address, &word, 1)!=0)
+        {
+                                        printf("LLI bar2 error writing tx.\n");
+        }    
     }
+   printf("write go velo\n");
+    if (lbPcie_user_write(MINIDAQ_GO_VELO , &go, 1)!=0)                   //Go velo
+    {
+        printf("LLI error Writing go rx2\n");
+    } 	
   if( VpxErr == 0 )
     vpx_tx_transmit();
 
-  int nwords = vpx_get_reply( 0 );
+  int nwords = vpx_get_reply( 20+nbytes, address+0x40);  // minidaq address for velo read is always [write addr + 0x40]
 
   // Check header
   if( VpxPkt[0] != 0xE8 )
@@ -469,7 +517,7 @@ int vpx_errorid()
   return err;
 }
 
-static int vpx_get_reply( int nbytes )
+static int vpx_get_reply( int nbytes, u32 address )
 {
   // Read reply data from Velopix into VpxPkt array
   // while not-empty and expected #bytes not received, with time-out
@@ -479,11 +527,14 @@ static int vpx_get_reply( int nbytes )
   int expected    = (1+2+2+(1536/8)+2+1)/4; // NB: SPIDR always reads max #bytes
   int expected_s  = (1+2+2+nbytes+2 + 3)/4; // Expected significant words/bytes 
   int timeout_cnt = 100 + expected;
+  //while( index < expected && timeout_cnt > 0 )
   while( index < expected && timeout_cnt > 0 )
     {
       if( vpx_rx_notempty() )
 	{
 	  // KH word = SpidrRegs[SPIDRVPX_RX_DATA_I];
+	  lbPcie_user_readW(address, &word);
+              printf("reply address=%x word = %x, \n", address, word);
 	  // Don't bother to unpack and store non-significant bytes
 	  if( index < expected_s )
 	    {
@@ -498,13 +549,14 @@ static int vpx_get_reply( int nbytes )
     }
 
   // Indicate various error cases
+ /*
   if( vpx_rx_notempty() )
     VpxErr |= VPX_ERR_NOTEMPTY;
   if( index > 0 && index < expected )
     VpxErr |= VPX_ERR_UNEXP_REPLY;
   else if( timeout_cnt == 0 )
     VpxErr |= VPX_ERR_EMPTY;
-
+*/
   // Return number of words read
   return index;
 }
@@ -519,12 +571,43 @@ static void vpx_tx_transmit()
 
 static int vpx_tx_full()
 {
-  return( (SpidrRegs[SPIDRVPX_TX_STATEMACH_I] & SPIDRVPX_TX_FULL) != 0 );
+  return 0;	//( (SpidrRegs[SPIDRVPX_TX_STATEMACH_I] & SPIDRVPX_TX_FULL) != 0 );
 }
 
 static int vpx_rx_notempty()
 {
-  return( (SpidrRegs[SPIDRVPX_RX_STATEMACH_I] & SPIDRVPX_RX_EMPTY) == 0 );
+  return 1;	//( (SpidrRegs[SPIDRVPX_RX_STATEMACH_I] & SPIDRVPX_RX_EMPTY) == 0 );
+}
+
+static u32 vpx_addr_map(u32 dev)
+{
+	u32 minidaq_vpx_addr;
+	u32 minidaq_gbt_fiber;
+	minidaq_gbt_fiber = MINIDAQ_GBT_FIBER_4;
+	u32 address;
+	switch (dev){
+		case 0 : 
+			minidaq_vpx_addr = MINIDAQ_VPX_ADDR_0;
+			break;
+		case 1 : 
+			minidaq_vpx_addr = MINIDAQ_VPX_ADDR_1;
+			break;
+		case 2 : 
+			minidaq_vpx_addr = MINIDAQ_VPX_ADDR_2;
+			break;
+		case 3 : 
+			minidaq_vpx_addr = MINIDAQ_VPX_ADDR_3;
+			break;
+		case 4 : 
+			minidaq_vpx_addr = MINIDAQ_VPX_ADDR_4;
+			break;
+		case 5 : 
+			minidaq_vpx_addr = MINIDAQ_VPX_ADDR_5;
+			break;
+	}
+	address = (((u32) MINIDAQ_GBT_HEADER << 16) | ((u32) minidaq_gbt_fiber <<12) | ((u32) minidaq_vpx_addr));
+	return address;
+		
 }
 
 int main()

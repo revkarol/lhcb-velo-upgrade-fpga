@@ -19,7 +19,7 @@ HEADERS = $(wildcard *.h)
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 vpserver : $(OBJECTS)
-	gcc $@.o -o $@
+	gcc $@.o -o $@ -L /home/upgrade/amc40lli/lli/lib -luser -lm -fopenmp		#-L /home/upgrade/amc40lli/lli/lib -luser -lm -fopenmp added by AFP
 
 vpclient: $(OBJECTS)
 	gcc $@.o -o $@

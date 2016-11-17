@@ -35,23 +35,34 @@ int main(int argc, char **argv)
 
         sa.sin_family = AF_INET;
         sa.sin_port = htons(50000);
-        //res = inet_pton(AF_INET, "192.168.122.11", &sa.sin_addr);
-        res = inet_pton(AF_INET, "127.0.0.1", &sa.sin_addr);
+        res = inet_pton(AF_INET, "192.168.122.11", &sa.sin_addr);
+        //res = inet_pton(AF_INET, "127.0.0.1", &sa.sin_addr);
 
         if (connect(connect_fd, (struct sockaddr *)&sa, sizeof sa) == -1) {
                 err_die("connect failed", connect_fd);
         }
 
         /* perform read write operations ... */
-        u32 cmd =CMD_GET_FIRMWVERSION;// CMD_GET_SOFTWVERSION;
+        //u32 cmd =CMD_GET_FIRMWVERSION;// CMD_GET_SOFTWVERSION;
+        u32 cmd = CMD_SET_VPXREG;// CMD_GET_SOFTWVERSION;
+        u32 addr = 0;
+        u8 nbytes = 100;
+        u32 len = (4+1)*4 + nbytes; 
+        u32 dummy = 0; 
+        u32 dev = 1; 
+        u8 cnt = 0; 
+        u32 param = ((cnt&0xff) <<24) | (nbytes & 0xff) << 16 | (addr & 0xffff); 
         u32 reqmsg[512];
         u32 repmsg[512];
-        reqmsg[0] = htonl(cmd);
-        reqmsg[1] = htonl(20);
-        reqmsg[2] = 0;
-        reqmsg[3] = 0;
-        reqmsg[4] = 0;
-        int ret = write(connect_fd, reqmsg, 20);
+        bzero(reqmsg, sizeof(reqmsg));
+        // bytes 0-4 are Server Header 
+        reqmsg[0] = htonl(cmd);  // CMD
+        reqmsg[1] = htonl(len);  // total len = payload Nbytes + (4+1)*4
+        reqmsg[2] = dummy;  // dummy
+        reqmsg[3] = htonl(dev);  // device
+        reqmsg[4] = htonl(param);  // "param" = [ cnt 8b | size 8b | addr 16b ]
+        reqmsg[16] = 0xaaaa;  // reqmsg[5...] = payload bytes
+        int ret = write(connect_fd, reqmsg, len);
 
         fprintf(stderr, "cmd=%x ret=%d\n",  cmd, ret);
         bzero(repmsg, sizeof(repmsg));
