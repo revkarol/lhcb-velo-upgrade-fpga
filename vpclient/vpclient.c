@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
         sa.sin_family = AF_INET;
         sa.sin_port = htons(50000);
-        res = inet_pton(AF_INET, "192.168.122.11", &sa.sin_addr);
+        res = inet_pton(AF_INET, "192.168.222.11", &sa.sin_addr);
         //res = inet_pton(AF_INET, "127.0.0.1", &sa.sin_addr);
 
         if (connect(connect_fd, (struct sockaddr *)&sa, sizeof sa) == -1) {
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
         u8 nbytes = 100;
         u32 len = (4+1)*4 + nbytes; 
         u32 dummy = 0; 
-        u32 dev = 1; 
+        u32 dev = 0; 
         u8 cnt = 0; 
         u32 param = ((cnt&0xff) <<24) | (nbytes & 0xff) << 16 | (addr & 0xffff); 
         u32 reqmsg[512];

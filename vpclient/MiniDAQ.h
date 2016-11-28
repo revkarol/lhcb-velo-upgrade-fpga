@@ -10,11 +10,12 @@ History:
 //19 DOWNTO 16
 #define	MINIDAQ_GBT_HEADER	0x5
 //15 DOWNTO 12
-#define	MINIDAQ_GBT_FIBER_3	0X3
-#define	MINIDAQ_GBT_FIBER_4	0X4
+#define	MINIDAQ_GBT_FIBER_3	0x3
+#define	MINIDAQ_GBT_FIBER_4	0x4
 #define	MINIDAQ_GBT_FIBER_5	0x5
 // 11 DOWNTO 0
 	//VELO
+		//Tx
 #define MINIDAQ_VPX_ADDR_0		0x600
 #define MINIDAQ_VPX_ADDR_1		0x608
 #define MINIDAQ_VPX_ADDR_2		0x610
@@ -22,7 +23,16 @@ History:
 #define MINIDAQ_VPX_ADDR_4		0x620
 #define MINIDAQ_VPX_ADDR_5		0x628
 #define MINIDAQ_GO_VELO			0x630
+//#define MINIDAQ_GO_VELO			0x630
 #define MINIDAQ_CONTROL_FIFO	0X634
+		//Rx
+#define MINIDAQ_VPX_ADDR_RX_0              0x640
+#define MINIDAQ_VPX_ADDR_RX_1              0x6C0
+#define MINIDAQ_VPX_ADDR_RX_2              0x740
+#define MINIDAQ_VPX_ADDR_RX_3              0x7C0
+#define MINIDAQ_VPX_ADDR_RX_4              0x840
+#define MINIDAQ_VPX_ADDR_RX_5              0x8C0	
+
 	//FRAMEWORK
 		//Tx & Rx
 #define MINIDAQ_P_SOL40_OFFSET 						0x004
